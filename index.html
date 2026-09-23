@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>사무실 3D 조명 제어</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #ffffff;
+    --ink: #1e293b;
+    --sub: #64748b;
+    --line: #e2e8f0;
+    --brand: #1d4ed8;
+    --brand2: #3b82f6;
+    --on: #f59e0b;
+    --off: #94a3b8;
+    --danger: #dc2626;
+    --ok: #16a34a;
+    --side: 320px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    font-family: "Malgun Gothic", "맑은 고딕", -apple-system, system-ui, sans-serif;
+    color: var(--ink); background: var(--bg);
+  }
+  #app { display: flex; height: 100%; }
+
+  /* ---------------- 사이드바 ---------------- */
+  #side {
+    width: var(--side); flex: 0 0 var(--side); height: 100%;
+    background: var(--panel); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; z-index: 5;
+  }
+  #side header {
+    padding: 14px 16px; background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff;
+  }
+  #side header h1 { margin: 0; font-size: 15px; letter-spacing: -.3px; }
+  #side header p { margin: 3px 0 0; font-size: 11.5px; opacity: .85; }
+  #side .scroll { flex: 1; overflow-y: auto; padding: 12px 14px 24px; }
+  .sec { margin-bottom: 18px; }
+  .sec > h2 {
+    margin: 0 0 8px; font-size: 11px; font-weight: 800; color: var(--sub);
+    letter-spacing: .6px; text-transform: uppercase;
+  }
+
+  .stat {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc;
+  }
+  .stat b { font-size: 22px; color: var(--brand); }
+  .stat span { font-size: 12px; color: var(--sub); }
+
+  .row { display: flex; gap: 6px; }
+  .row > * { flex: 1; }
+  button {
+    font: inherit; font-size: 12px; padding: 8px 6px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink);
+  }
+  button:hover { border-color: var(--brand2); color: var(--brand); }
+  button.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 700; }
+  button.primary:hover { background: #1e40af; color: #fff; }
+  button.ghost { background: #f1f5f9; }
+
+  /* 조명 버튼 격자 */
+  .blk { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+  .blk .bhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .blk .bhead strong { font-size: 12.5px; }
+  .blk .bhead button { flex: none; padding: 4px 8px; font-size: 11px; }
+  .lrow { display: flex; gap: 4px; margin-bottom: 4px; align-items: center; }
+  .lrow .rlab { width: 16px; font-size: 10px; color: var(--sub); text-align: center; flex: none; }
+  .lbtn {
+    flex: 1; padding: 7px 0; font-size: 11.5px; font-weight: 700; border-radius: 6px;
+    border: 1px solid var(--line); background: #f8fafc; color: var(--off); cursor: pointer;
+  }
+  .lbtn.on { background: var(--on); border-color: #d97706; color: #fff; }
+  .lbtn.sel { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .lbtn:hover { border-color: var(--brand2); }
+
+  /* 검색 */
+  input[type=text], input[type=search], select {
+    width: 100%; font: inherit; font-size: 12.5px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 8px; outline: none; background: #fff; color: var(--ink);
+  }
+  input:focus, select:focus { border-color: var(--brand2); }
+  #results { margin-top: 6px; max-height: 190px; overflow-y: auto; }
+  #results .hit {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px;
+    cursor: pointer; font-size: 12px;
+  }
+  #results .hit:hover { background: #eff6ff; }
+  #results .sw { width: 11px; height: 11px; border-radius: 3px; border: 1px solid rgba(0,0,0,.25); flex: none; }
+  #results .nm { font-weight: 700; }
+  #results .mt { color: var(--sub); font-size: 11px; margin-left: auto; }
+  .empty { font-size: 11.5px; color: var(--sub); padding: 6px 2px; }
+
+  /* 범례 */
+  .leg { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; cursor: pointer; font-size: 11.5px; }
+  .leg:hover { background: #f1f5f9; }
+  .leg .sw { width: 13px; height: 13px; border-radius: 3px; border: 1px solid rgba(0,0,0,.25); flex: none; }
+  .leg .ct { margin-left: auto; color: var(--sub); font-size: 11px; }
+  .leg.dim { opacity: .4; }
+
+  /* API */
+  .fld { margin-bottom: 7px; }
+  .fld label { display: block; font-size: 10.5px; color: var(--sub); margin-bottom: 3px; font-weight: 700; }
+  .modes { display: flex; gap: 6px; }
+  .modes label {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 4px; cursor: pointer; font-size: 11.5px;
+  }
+  .modes label.sel { border-color: var(--brand); background: #eff6ff; color: var(--brand); font-weight: 700; }
+  .modes input { display: none; }
+
+  /* ---------------- 3D 영역 ---------------- */
+  #view { position: relative; flex: 1; height: 100%; background: #0f172a; }
+  #canvas-wrap { position: absolute; inset: 0; }
+  canvas { display: block; }
+
+  #topbar {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; z-index: 3;
+    background: rgba(255,255,255,.94); padding: 6px; border-radius: 11px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.28);
+  }
+  #topbar button { padding: 7px 12px; font-size: 12px; border-radius: 7px; }
+  #topbar button.act { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+  #tip {
+    position: absolute; pointer-events: none; z-index: 6; display: none;
+    background: rgba(15,23,42,.93); color: #fff; padding: 8px 11px; border-radius: 9px;
+    font-size: 12px; line-height: 1.45; white-space: nowrap;
+    box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  }
+  #tip b { font-size: 13.5px; }
+  #tip .l { color: #fbbf24; font-weight: 700; }
+  #tip .s { color: #cbd5e1; }
+
+  #toast {
+    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    z-index: 7; display: flex; flex-direction: column; gap: 7px; align-items: center;
+  }
+  .msg {
+    background: rgba(15,23,42,.94); color: #fff; padding: 9px 15px; border-radius: 9px;
+    font-size: 12.5px; box-shadow: 0 8px 22px rgba(0,0,0,.35);
+    border-left: 3px solid var(--brand2);
+  }
+  .msg.ok { border-left-color: var(--ok); }
+  .msg.err { border-left-color: var(--danger); }
+
+  #hud {
+    position: absolute; left: 12px; bottom: 12px; z-index: 3;
+    background: rgba(255,255,255,.93); border-radius: 9px; padding: 8px 11px;
+    font-size: 11px; color: var(--sub); line-height: 1.6;
+    box-shadow: 0 4px 14px rgba(0,0,0,.2);
+  }
+  #hud b { color: var(--ink); }
+
+  /* 제작자 표기 — 우측 상단 */
+  #credit {
+    position: absolute; right: 16px; top: 12px; z-index: 4;
+    text-align: right; pointer-events: none;
+    font-family: 'Segoe UI', 'Malgun Gothic', system-ui, sans-serif;
+    text-shadow: 0 2px 6px rgba(0,0,0,.55), 0 0 2px rgba(0,0,0,.4);
+  }
+  #credit .by,
+  #credit .mail,
+  #credit .date { font-size: 12px; font-weight: 600; line-height: 1.35; white-space: nowrap; }
+  #credit .by   { color: #fff; letter-spacing: .1px; }
+  #credit .mail,
+  #credit .date { color: #e2e8f0; }
+
+  #compass {
+    position: absolute; right: 14px; top: 104px; z-index: 3;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(255,255,255,.93); box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  }
+  .figtarget {
+    font-size: 11.5px; color: var(--sub); padding: 6px 8px; margin-bottom: 6px;
+    border: 1px dashed var(--line); border-radius: 7px; text-align: center;
+  }
+  .figtarget.on { color: var(--brand); border-color: var(--brand2); font-weight: 700; }
+  .figgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .figgrid img {
+    width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px;
+    border: 2px solid transparent; cursor: pointer; display: block;
+  }
+  .figgrid img:hover { border-color: var(--brand2); }
+  .figgrid img.used { opacity: .34; }
+  .figgrid img.sel { border-color: var(--brand); }
+  #loading {
+    position: absolute; inset: 0; z-index: 9; display: flex;
+    align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+    background: #0f172a; color: #cbd5e1; font-size: 13px;
+  }
+  .spin {
+    width: 26px; height: 26px; border: 3px solid #334155; border-top-color: var(--brand2);
+    border-radius: 50%; animation: sp .8s linear infinite;
+  }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  .hint { margin: -2px 0 10px; font-size: 11.5px; line-height: 1.55;
+          color: var(--sub); }
+  #seatName { flex: 1; min-width: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <header>
+      <h1>사무실 3D 조명 제어</h1>
+      <p>파티션 좌석별 조명 제어 · 3D 시뮬레이터</p>
+    </header>
+    <div class="scroll">
+
+      <div class="sec">
+        <div class="stat"><b id="onCount">0</b><span>/ 30 개 조명 켜짐</span></div>
+        <div class="stat" style="margin-top:6px">
+          <b id="sitCount">0</b><span>명 근무 · <span id="moveCount">0</span>명 이동 ·
+          <span id="goneCount">0</span>명 퇴근</span>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="primary" id="allOn">전체 켜기</button>
+          <button class="ghost" id="allOff">전체 끄기</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h2>조명 제어</h2>
+        <div id="lightPanel"></div>
+      </div>
+
+      <div class="sec">
+        <h2>좌석 검색</h2>
+        <input type="search" id="q" placeholder="이름 또는 조명번호 (예: N1-01, 443)" autocomplete="off">
+        <div id="results"><div class="empty">이름을 입력하면 좌석을 찾아 이동합니다.</div></div>
+      </div>
+
+      <div class="sec">
+        <h2>좌석 설정</h2>
+        <p class="hint">좌석을 클릭한 뒤 이름을 바꾸거나 사진을 올리세요.<br>입력한 내용은 이 브라우저에만 저장됩니다.</p>
+        <div class="fld"><label>좌석 이름</label>
+          <div class="row"><input type="text" id="seatName" placeholder="좌석을 먼저 클릭" maxlength="12">
+          <button class="ghost" id="seatRename">변경</button></div>
+        </div>
+        <div class="row" style="margin:6px 0 8px">
+          <button class="ghost" id="figAdd" style="flex:1">사진 추가</button>
+          <button class="ghost" id="figReset">전체 초기화</button>
+        </div>
+        <input type="file" id="figFile" accept="image/*" multiple hidden>
+        <div class="figtarget" id="figTarget">좌석을 클릭한 뒤 사진을 고르세요.</div>
+        <div class="figgrid" id="figGrid"></div>
+        <div class="row" style="margin-top:6px">
+          <button class="ghost" id="figClear">배정 해제</button>
+          <button class="ghost" id="figExport">배정 내보내기</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h2>팀 구분</h2>
+        <div id="legend"></div>
+      </div>
+  </aside>
+
+  <main id="view">
+    <div id="canvas-wrap"></div>
+    <div id="topbar">
+      <button id="vTop">탑뷰</button>
+      <button id="vIso" class="act">조감뷰</button>
+      <button id="vEye">시점뷰</button>
+      <button id="tCeil">천장</button>
+      <button id="tName" class="act">이름표</button>
+    </div>
+    <div id="credit">
+      <div class="by">created by Yoon-Sik Yoo, Ph.D.</div>
+      <div class="mail">midasyoo@etri.re.kr</div>
+      <div class="date">2026.09.22</div>
+    </div>
+    <svg id="compass" viewBox="0 0 80 80">
+      <circle cx="40" cy="40" r="38" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
+      <g id="rose">
+        <polygon points="40,10 46,40 40,34 34,40" fill="#dc2626"/>
+        <polygon points="40,70 46,40 40,46 34,40" fill="#94a3b8"/>
+      </g>
+      <text x="40" y="9" text-anchor="middle" font-size="11" font-weight="700" fill="#334155">N</text>
+    </svg>
+    <div id="hud">
+      <b>조명/좌석 클릭</b> 켜기·끄기 · <b>드래그</b> 회전 · <b>휠</b> 확대
+    </div>
+    <div id="tip"></div>
+    <div id="toast"></div>
+    <div id="loading"><div class="spin"></div><div>3D 사무실을 만드는 중…</div></div>
+  </main>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script src="lib/OrbitControls.js"></script>
+<script src="data.js"></script>
+<script src="figures.js"></script>
+<script src="people.js"></script>
+<script src="app.js"></script>
+<script src="setup.js"></script>
+<!-- 방문 집계: https://midasyoo.github.io/stats.html · 수집 범위 https://midasyoo.github.io/privacy.html -->
+<script src="https://midasyoo.github.io/assets/analytics.js" defer></script>
+</body>
+</html>
