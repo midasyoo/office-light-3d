@@ -28,6 +28,21 @@ def main():
     out_name = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_OUT
     src = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
 
+    # 설치형(PWA) 전용 마크업 제거.
+    # 단일 파일은 file:// 로 열리므로 매니페스트·서비스워커·모바일 화면 전환이
+    # 동작하지 않는다. 특히 mobile.html 로 보내는 전환 코드가 남아 있으면
+    # 휴대폰에서 이 파일을 열었을 때 빈 화면이 된다.
+    # 여는 표시 뒤에 설명을 덧붙여도 걸리도록 --> 까지 통째로 흘려 보낸다.
+    src, n_pwa = re.subn(r'[ \t]*<!--\s*PWA:BEGIN.*?-->.*?<!--\s*PWA:END\s*-->[ \t]*\n?',
+                         '', src, flags=re.S)
+
+    # 외부에서 받아오는 스크립트(방문 집계 등)는 넣지 않는다.
+    # 오프라인 실행이 목적이고, 파일 하나를 열었을 뿐인데 바깥으로
+    # 요청이 나가서도 안 된다.
+    src, n_ext = re.subn(r'[ \t]*<script[^>]*\ssrc="https?://[^"]*"[^>]*>\s*</script>[ \t]*\n?',
+                         '', src)
+    src = re.sub(r'[ \t]*<!--\s*방문 집계:[^>]*-->[ \t]*\n?', '', src)
+
     used = []
 
     def inline(m):
@@ -54,6 +69,8 @@ def main():
 
     for path, n in used:
         print('  %-22s %7.1f KB' % (path, n / 1024))
+    if n_pwa or n_ext:
+        print('  제외: 설치형 전용 %d블록 · 외부 스크립트 %d개' % (n_pwa, n_ext))
     print('\n%s (%.1f MB)' % (out_name, os.path.getsize(out) / 1024 / 1024))
 
 

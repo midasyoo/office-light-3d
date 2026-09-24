@@ -32,7 +32,10 @@
 
   const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 400);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  // 휴대폰은 화면이 작은 대신 픽셀 밀도가 높다. 3배까지 그리면 발열·프레임 저하가
+  // 눈에 띄므로 작은 화면에서는 배율을 낮춘다. 육안 차이는 거의 없다.
+  const SMALL_SCREEN = Math.min(screen.width, screen.height) < 560;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, SMALL_SCREEN ? 1.5 : 2));
   wrap.appendChild(renderer.domElement);
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -504,13 +507,30 @@
   function pulse(addr) { pulseAddr = addr; pulseT = 0; }
 
   const CENTER = new THREE.Vector3((R.x0 + R.x1) / 2, 0, (R.z0 + R.z1) / 2);
-  const VIEWS = {
-    iso: [new THREE.Vector3(CENTER.x - 3, 20, CENTER.z + 24), CENTER.clone()],
-    top: [new THREE.Vector3(CENTER.x, 30, CENTER.z + 0.01), CENTER.clone()],
-    eye: [new THREE.Vector3(R.x0 + 1.5, 1.65, R.door.z), new THREE.Vector3(CENTER.x, 1.4, R.door.z)],
-  };
+
+  /* 이 방은 가로로 길다(27m x 15m). 가로 화면에서는 남쪽에서 보면 알맞게 차지만,
+     세로로 긴 휴대폰 화면에서 같은 시점을 쓰면 방이 가운데 띠처럼 작게 보이고
+     위아래가 텅 빈다. 세로 화면에서는 동쪽에서 바라봐 방의 긴 축을 화면 세로로
+     눕힌다. 화면을 돌릴 수 있으므로 시점을 누를 때마다 다시 계산한다. */
+  function views() {
+    const eye = [new THREE.Vector3(R.x0 + 1.5, 1.65, R.door.z),
+                 new THREE.Vector3(CENTER.x, 1.4, R.door.z)];
+    if (innerHeight > innerWidth * 1.1) {
+      return {
+        iso: [new THREE.Vector3(CENTER.x + 27, 20, CENTER.z + 2), CENTER.clone()],
+        top: [new THREE.Vector3(CENTER.x + 8, 33, CENTER.z), CENTER.clone()],
+        eye: eye,
+      };
+    }
+    return {
+      iso: [new THREE.Vector3(CENTER.x - 3, 20, CENTER.z + 24), CENTER.clone()],
+      top: [new THREE.Vector3(CENTER.x, 30, CENTER.z + 0.01), CENTER.clone()],
+      eye: eye,
+    };
+  }
   function setView(k, btn) {
-    flyTo(VIEWS[k][0].clone(), VIEWS[k][1].clone());
+    const v = views()[k];
+    flyTo(v[0].clone(), v[1].clone());
     document.querySelectorAll('#vTop,#vIso,#vEye').forEach(b => b.classList.toggle('act', b === btn));
     setCeiling(k === 'eye');      // 탑뷰/조감뷰에서는 천장을 걷어 내부를 본다
   }
@@ -531,8 +551,9 @@
     }));
   };
 
-  camera.position.copy(VIEWS.iso[0]);
-  controls.target.copy(VIEWS.iso[1]);
+  const START = views().iso;
+  camera.position.copy(START[0]);
+  controls.target.copy(START[1]);
 
   // ?cam=x,y,z,tx,ty,tz — 화면 캡처·시연용 시점 고정
   (function () {
@@ -567,6 +588,9 @@
   }
 
   renderer.domElement.addEventListener('pointermove', ev => {
+    // 손가락에는 '가리키기'가 없다. 터치 중 움직임은 화면 회전이므로
+    // 말풍선을 띄우지 않고, 매 프레임 광선 판정을 도는 비용도 아낀다.
+    if (ev.pointerType === 'touch') return;
     const o = pick(ev);
     hovered = o;
     if (!o) { tip.style.display = 'none'; renderer.domElement.style.cursor = 'grab'; return; }
@@ -593,13 +617,25 @@
   });
   renderer.domElement.addEventListener('pointerleave', () => { tip.style.display = 'none'; });
 
-  let downPos = null;
-  renderer.domElement.addEventListener('pointerdown', ev => { downPos = [ev.clientX, ev.clientY]; });
+  let downPos = null, downTouch = false, fingers = 0;
+  renderer.domElement.addEventListener('pointerdown', ev => {
+    fingers++;
+    downTouch = ev.pointerType === 'touch';
+    downPos = fingers > 1 ? null : [ev.clientX, ev.clientY];   // 두 손가락은 확대/이동
+  });
+  renderer.domElement.addEventListener('pointercancel', () => {
+    fingers = Math.max(0, fingers - 1);
+    downPos = null;
+  });
   renderer.domElement.addEventListener('pointerup', ev => {
-    if (!downPos) return;
+    const pinching = fingers > 1;
+    fingers = Math.max(0, fingers - 1);
+    if (!downPos || pinching) { downPos = null; return; }
     const moved = Math.hypot(ev.clientX - downPos[0], ev.clientY - downPos[1]);
     downPos = null;
-    if (moved > 5) return;                       // 드래그는 회전으로 처리
+    // 드래그는 회전으로 처리. 손가락은 누르는 동안 몇 px 씩 흔들리므로
+    // 마우스와 같은 기준을 쓰면 탭이 자주 무시된다.
+    if (moved > (downTouch ? 12 : 5)) return;
     const o = pick(ev);
     if (!o) return;
     const addr = o.userData.seat ? o.userData.seat.addr : o.userData.light.addr;

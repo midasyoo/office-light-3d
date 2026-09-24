@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="사무실 조명 제어">
+  <title>사무실 조명 제어</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e3a8a"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffe0a0" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#ffe0a0" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffe0a0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 바탕 -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- 천장 조명 격자 5열 x 3행.
+       켜진 등은 호박색 + 아래로 퍼지는 빛, 꺼진 등은 회색.
+       마스커블 아이콘의 안전 영역(중앙 80%) 안에 모두 들어간다. -->
+  <g>
+    <!-- 1행 -->
+    <ellipse cx="138" cy="161" rx="52" ry="40" fill="url(#glow)"/>
+    <ellipse cx="198" cy="161" rx="52" ry="40" fill="url(#glow)"/>
+    <ellipse cx="258" cy="161" rx="52" ry="40" fill="url(#glow)"/>
+    <ellipse cx="318" cy="161" rx="52" ry="40" fill="url(#glow)"/>
+    <ellipse cx="378" cy="161" rx="52" ry="40" fill="url(#glow)"/>
+    <rect x="112" y="150" width="52" height="22" rx="11" fill="#fbbf24"/>
+    <rect x="172" y="150" width="52" height="22" rx="11" fill="#fbbf24"/>
+    <rect x="232" y="150" width="52" height="22" rx="11" fill="#fbbf24"/>
+    <rect x="292" y="150" width="52" height="22" rx="11" fill="#fbbf24"/>
+    <rect x="352" y="150" width="52" height="22" rx="11" fill="#fbbf24"/>
+
+    <!-- 2행 -->
+    <ellipse cx="138" cy="257" rx="52" ry="40" fill="url(#glow)"/>
+    <ellipse cx="198" cy="257" rx="52" ry="40" fill="url(#glow)"/>
+    <ellipse cx="318" cy="257" rx="52" ry="40" fill="url(#glow)"/>
+    <ellipse cx="378" cy="257" rx="52" ry="40" fill="url(#glow)"/>
+    <rect x="112" y="246" width="52" height="22" rx="11" fill="#fbbf24"/>
+    <rect x="172" y="246" width="52" height="22" rx="11" fill="#fbbf24"/>
+    <rect x="232" y="246" width="52" height="22" rx="11" fill="#93a5c4" opacity="0.65"/>
+    <rect x="292" y="246" width="52" height="22" rx="11" fill="#fbbf24"/>
+    <rect x="352" y="246" width="52" height="22" rx="11" fill="#fbbf24"/>
+
+    <!-- 3행 -->
+    <ellipse cx="138" cy="353" rx="52" ry="40" fill="url(#glow)"/>
+    <ellipse cx="258" cy="353" rx="52" ry="40" fill="url(#glow)"/>
+    <ellipse cx="378" cy="353" rx="52" ry="40" fill="url(#glow)"/>
+    <rect x="112" y="342" width="52" height="22" rx="11" fill="#fbbf24"/>
+    <rect x="172" y="342" width="52" height="22" rx="11" fill="#93a5c4" opacity="0.65"/>
+    <rect x="232" y="342" width="52" height="22" rx="11" fill="#fbbf24"/>
+    <rect x="292" y="342" width="52" height="22" rx="11" fill="#93a5c4" opacity="0.65"/>
+    <rect x="352" y="342" width="52" height="22" rx="11" fill="#fbbf24"/>
+  </g>
+</svg>
